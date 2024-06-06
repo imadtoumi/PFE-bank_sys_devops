@@ -6,7 +6,7 @@ COPY docker/requeirments.txt requeirments.txt
 
 RUN python3 -m pip install --upgrade pip
 
-RUN pip3 install -r requeirments.txt
+RUN pip3 install -r requirments.txt
 
 COPY . .
 

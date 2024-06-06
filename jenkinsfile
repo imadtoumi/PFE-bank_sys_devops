@@ -1,0 +1,86 @@
+pipeline {
+    agent {label 'slave-1'}
+    
+    tools{
+        jdk 'jdk17'
+    }
+    
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+    }
+	    
+    stages {
+        stage('clean workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        
+        stage('git checkout') {
+            steps {
+                git branch: 'main', poll: false, url: 'https://github.com/imadtoumi/bank_sys_devops.git'
+            }
+        }
+        
+        stage('sonar-qube analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Bank_sys \
+                    -Dsonar.projectKey=Bank_sys'''
+                }
+            }
+        }
+        
+        stage('OWASP dependecy check') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --format JSON --out dependency_check.json ', odcInstallation: 'DC'
+            }
+        }
+        
+        stage('Docker build image') {
+            steps {
+                script{
+                    sh 'docker build -t bank_sys:latest -f docker/Dockerfile .'
+                }
+            }
+        }
+        
+        stage('trivy scan image') {
+            steps {
+                script{
+                   sh 'trivy image --no-progress --timeout 10m --scanners vuln --severity HIGH,CRITICAL --format table -o scan.txt bank_sys:latest' 
+                }
+            }
+        }
+        
+        stage('docker run container / and publish') {
+            steps {
+                script{
+                    sh 'docker run -dp 5000:5000 bank_sys:latest'
+                }
+            }
+        }
+    }
+    
+    post {
+        // always {
+            //cleanWs() // Clean up workspace after each run
+        // }
+        success {
+            echo 'Pipeline completed successfully!'
+            // Additional steps on success, like sending notifications
+        }
+        failure {
+            echo 'Pipeline failed!'
+            // Additional steps on failure, like sending notifications
+        }
+        unstable {
+            echo 'Pipeline completed with warnings!'
+            // Additional steps on instability, like sending notifications
+        }
+        aborted {
+            echo 'Pipeline was aborted!'
+            // Additional steps on abort, like sending notifications
+        }
+    }
+}
