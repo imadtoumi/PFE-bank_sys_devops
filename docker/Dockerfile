@@ -2,7 +2,7 @@ FROM python:3.9.2
 
 WORKDIR bank_docker
 
-COPY docker/requirments.txt requeirments.txt 
+COPY docker/requirments.txt requirments.txt 
 
 RUN python3 -m pip install --upgrade pip
 
